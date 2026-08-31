@@ -4,24 +4,8 @@ import { exerciseApi } from '../../services/api/exerciseApi';
 import type { Exercise, MeasurementUnit } from '../../types/exercise';
 import { formatMeasurementUnit } from '../../utils/formatMeasurementUnit';
 import { toUserMessage } from '../../utils/errorMessages';
+import { groupExercisesByCategory } from '../../utils/groupExercisesByCategory';
 import styles from './ExercisesPage.module.css';
-
-interface GroupedExercises {
-  category: string;
-  exercises: Exercise[];
-}
-
-function groupByCategory(exercises: Exercise[]): GroupedExercises[] {
-  const groups = new Map<string, Exercise[]>();
-  for (const exercise of exercises) {
-    const group = groups.get(exercise.category) ?? [];
-    group.push(exercise);
-    groups.set(exercise.category, group);
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => a.localeCompare(b, 'he'))
-    .map(([category, categoryExercises]) => ({ category, exercises: categoryExercises }));
-}
 
 export function ExercisesPage() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -93,7 +77,7 @@ export function ExercisesPage() {
     }
   };
 
-  const groups = groupByCategory(exercises);
+  const groups = groupExercisesByCategory(exercises);
 
   return (
     <div className={styles.screen}>
