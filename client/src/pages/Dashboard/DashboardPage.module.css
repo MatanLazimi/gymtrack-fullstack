@@ -61,3 +61,16 @@
   color: var(--color-text-muted);
   max-width: 280px;
 }
+
+.exercisesLink {
+  margin-top: 10px;
+  display: inline-block;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 15px;
+  border-radius: var(--radius-md);
+  padding: 13px 24px;
+}
