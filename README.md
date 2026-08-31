@@ -87,14 +87,23 @@ This installs both `client` and `server` workspaces.
 
 ```bash
 cp server/.env.example server/.env
+cp client/.env.example client/.env
 ```
+
+Server (`server/.env`):
 
 | Variable | Description |
 |---|---|
 | `PORT` | Backend server port (default `4000`) |
 | `MONGODB_URI` | MongoDB connection string |
-| `JWT_SECRET` | Secret used to sign auth tokens — change for any real deployment |
+| `JWT_SECRET` | Secret used to sign auth tokens — required, no default, change for any real deployment |
 | `CLIENT_ORIGIN` | Frontend origin allowed by CORS |
+
+Client (`client/.env`):
+
+| Variable | Description |
+|---|---|
+| `VITE_API_URL` | Base URL of the backend API (default `http://localhost:4000/api`) |
 
 ### Run the server
 
