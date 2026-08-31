@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed": "tsx src/scripts/seedExercises.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
