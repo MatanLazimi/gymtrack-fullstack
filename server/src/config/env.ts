@@ -11,7 +11,7 @@ function required(name: string, fallback?: string): string {
 export const env = {
   port: Number(process.env.PORT ?? 4000),
   mongodbUri: required('MONGODB_URI', 'mongodb://localhost:27017/gymtrack'),
-  jwtSecret: required('JWT_SECRET', 'change-me'),
+  jwtSecret: required('JWT_SECRET'),
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
   nodeEnv: process.env.NODE_ENV ?? 'development',
 };
