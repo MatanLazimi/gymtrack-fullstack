@@ -21,19 +21,32 @@ function mockFetchSequence(responses: Array<{ ok: boolean; status: number; body:
   return fn;
 }
 
+function renderPicker() {
+  return render(
+    <MemoryRouter initialEntries={['/workouts/new']}>
+      <Routes>
+        <Route path="/workouts/new" element={<NewWorkoutPage />} />
+        <Route path="/workouts/:id" element={<div>workout page</div>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 describe('NewWorkoutPage', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it('only lists active exercises', async () => {
-    vi.stubGlobal('fetch', mockFetchSequence([{ ok: true, status: 200, body: { exercises: EXERCISES } }]));
-
-    render(
-      <MemoryRouter initialEntries={['/workouts/new']}>
-        <NewWorkoutPage />
-      </MemoryRouter>,
+  it('only lists active exercises when there is no workout for today', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchSequence([
+        { ok: true, status: 200, body: { workouts: [] } },
+        { ok: true, status: 200, body: { exercises: EXERCISES } },
+      ]),
     );
+
+    renderPicker();
 
     expect(await screen.findByText('לחיצות חזה')).toBeInTheDocument();
     expect(screen.queryByText('תרגיל מושבת')).not.toBeInTheDocument();
@@ -43,23 +56,32 @@ describe('NewWorkoutPage', () => {
     vi.stubGlobal(
       'fetch',
       mockFetchSequence([
+        { ok: true, status: 200, body: { workouts: [] } },
         { ok: true, status: 200, body: { exercises: EXERCISES } },
         { ok: true, status: 201, body: { workout: { _id: 'w1', exercises: [] } } },
       ]),
     );
 
-    render(
-      <MemoryRouter initialEntries={['/workouts/new']}>
-        <Routes>
-          <Route path="/workouts/new" element={<NewWorkoutPage />} />
-          <Route path="/workouts/:id" element={<div>workout w1 page</div>} />
-        </Routes>
-      </MemoryRouter>,
-    );
+    renderPicker();
 
     await userEvent.click(await screen.findByText('לחיצות חזה'));
     await userEvent.click(screen.getByRole('button', { name: /התחלת אימון/ }));
 
-    expect(await screen.findByText('workout w1 page')).toBeInTheDocument();
+    expect(await screen.findByText('workout page')).toBeInTheDocument();
+  });
+
+  it('redirects straight to an existing workout for today instead of showing the picker', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchSequence([
+        { ok: true, status: 200, body: { workouts: [{ _id: 'today-workout', date: new Date().toISOString() }] } },
+        { ok: true, status: 200, body: { exercises: EXERCISES } },
+      ]),
+    );
+
+    renderPicker();
+
+    expect(await screen.findByText('workout page')).toBeInTheDocument();
+    expect(screen.queryByText('בחירת תרגילים')).not.toBeInTheDocument();
   });
 });
