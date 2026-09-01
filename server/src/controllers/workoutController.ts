@@ -1,13 +1,6 @@
 import type { Request, Response } from 'express';
 import * as workoutService from '../services/workoutService.js';
-import { ApiError } from '../middleware/errorHandler.js';
-
-function requireUserId(req: Request): string {
-  if (!req.userId) {
-    throw new ApiError(401, 'Authentication required');
-  }
-  return req.userId;
-}
+import { requireUserId } from '../utils/requireUserId.js';
 
 export async function list(req: Request, res: Response): Promise<void> {
   const workouts = await workoutService.listWorkouts(requireUserId(req));

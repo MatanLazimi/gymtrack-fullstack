@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
 import * as exerciseService from '../services/exerciseService.js';
+import * as workoutService from '../services/workoutService.js';
+import { requireUserId } from '../utils/requireUserId.js';
 
 export async function list(_req: Request, res: Response): Promise<void> {
   const exercises = await exerciseService.listExercises();
@@ -24,4 +26,14 @@ export async function update(req: Request, res: Response): Promise<void> {
 export async function remove(req: Request, res: Response): Promise<void> {
   await exerciseService.deleteExercise(req.params.id);
   res.status(204).send();
+}
+
+export async function history(req: Request, res: Response): Promise<void> {
+  const excludeWorkoutId = typeof req.query.excludeWorkoutId === 'string' ? req.query.excludeWorkoutId : undefined;
+  const previousPerformance = await workoutService.getPreviousPerformance(
+    requireUserId(req),
+    req.params.id,
+    excludeWorkoutId,
+  );
+  res.json({ previousPerformance });
 }
