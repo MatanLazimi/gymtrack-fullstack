@@ -31,6 +31,9 @@ export function DashboardPage() {
         <Link to="/workouts/new" className={styles.startButton}>
           התחלת אימון
         </Link>
+        <Link to="/history" className={styles.exercisesLink}>
+          היסטוריית אימונים
+        </Link>
         <Link to="/exercises" className={styles.exercisesLink}>
           מאגר תרגילים
         </Link>

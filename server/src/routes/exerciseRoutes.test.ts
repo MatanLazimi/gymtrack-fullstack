@@ -5,12 +5,14 @@ import { createApp } from '../app.js';
 import { connectDatabase, disconnectDatabase } from '../config/db.js';
 import { ExerciseModel } from '../models/Exercise.js';
 import { UserModel } from '../models/User.js';
+import { WorkoutModel } from '../models/Workout.js';
 
 let app: Express;
 let authenticatedAgent: ReturnType<typeof request.agent>;
 
 const exercise = { name: 'לחיצות חזה', category: 'חזה', measurementUnit: 'kg' as const };
 const TEST_USER_EMAIL = 'exercise-library-tests@example.com';
+const OTHER_USER_EMAIL = 'exercise-library-tests-other@example.com';
 
 beforeAll(async () => {
   await connectDatabase();
@@ -19,7 +21,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await ExerciseModel.deleteMany({});
-  await UserModel.deleteOne({ email: TEST_USER_EMAIL });
+  await WorkoutModel.deleteMany({});
+  await UserModel.deleteMany({ email: { $in: [TEST_USER_EMAIL, OTHER_USER_EMAIL] } });
   authenticatedAgent = request.agent(app);
   await authenticatedAgent.post('/api/auth/register').send({ email: TEST_USER_EMAIL, password: 'password123' });
 });
@@ -96,5 +99,71 @@ describe('DELETE /api/exercises/:id', () => {
     const response = await authenticatedAgent.delete(`/api/exercises/${created.id}`);
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe('GET /api/exercises/:id/history', () => {
+  it('returns null when the user has never logged the exercise', async () => {
+    const created = await ExerciseModel.create(exercise);
+    const response = await authenticatedAgent.get(`/api/exercises/${created.id}/history`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.previousPerformance).toBeNull();
+  });
+
+  it('returns the most recent logged sets for the exercise', async () => {
+    const created = await ExerciseModel.create(exercise);
+    await WorkoutModel.create({
+      userId: (await UserModel.findOne({ email: TEST_USER_EMAIL }))!._id,
+      date: new Date('2026-01-01'),
+      exercises: [{ exerciseId: created.id, exerciseName: created.name, sets: [{ value: 60, reps: 12 }] }],
+    });
+    await WorkoutModel.create({
+      userId: (await UserModel.findOne({ email: TEST_USER_EMAIL }))!._id,
+      date: new Date('2026-01-08'),
+      exercises: [{ exerciseId: created.id, exerciseName: created.name, sets: [{ value: 65, reps: 10 }] }],
+    });
+
+    const response = await authenticatedAgent.get(`/api/exercises/${created.id}/history`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.previousPerformance.sets).toEqual([expect.objectContaining({ value: 65, reps: 10 })]);
+  });
+
+  it('excludes the given workout id, e.g. the one currently being edited', async () => {
+    const created = await ExerciseModel.create(exercise);
+    const userId = (await UserModel.findOne({ email: TEST_USER_EMAIL }))!._id;
+    await WorkoutModel.create({
+      userId,
+      date: new Date('2026-01-01'),
+      exercises: [{ exerciseId: created.id, exerciseName: created.name, sets: [{ value: 60, reps: 12 }] }],
+    });
+    const today = await WorkoutModel.create({
+      userId,
+      date: new Date('2026-01-08'),
+      exercises: [{ exerciseId: created.id, exerciseName: created.name, sets: [{ value: 65, reps: 10 }] }],
+    });
+
+    const response = await authenticatedAgent.get(
+      `/api/exercises/${created.id}/history?excludeWorkoutId=${today.id}`,
+    );
+
+    expect(response.body.previousPerformance.sets).toEqual([expect.objectContaining({ value: 60, reps: 12 })]);
+  });
+
+  it("never returns another user's workout data", async () => {
+    const created = await ExerciseModel.create(exercise);
+    const otherAgent = request.agent(app);
+    await otherAgent.post('/api/auth/register').send({ email: OTHER_USER_EMAIL, password: 'password123' });
+    const otherUserId = (await UserModel.findOne({ email: OTHER_USER_EMAIL }))!._id;
+    await WorkoutModel.create({
+      userId: otherUserId,
+      date: new Date(),
+      exercises: [{ exerciseId: created.id, exerciseName: created.name, sets: [{ value: 100, reps: 5 }] }],
+    });
+
+    const response = await authenticatedAgent.get(`/api/exercises/${created.id}/history`);
+
+    expect(response.body.previousPerformance).toBeNull();
   });
 });

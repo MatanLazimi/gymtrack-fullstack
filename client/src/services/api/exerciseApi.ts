@@ -1,4 +1,5 @@
 import type { Exercise, ExerciseInput } from '../../types/exercise';
+import type { PreviousPerformance } from '../../types/workout';
 import { apiClient } from './client';
 
 interface ExerciseListResponse {
@@ -9,9 +10,17 @@ interface ExerciseResponse {
   exercise: Exercise;
 }
 
+interface ExerciseHistoryResponse {
+  previousPerformance: PreviousPerformance | null;
+}
+
 export const exerciseApi = {
   list: () => apiClient.get<ExerciseListResponse>('/exercises'),
   create: (input: ExerciseInput) => apiClient.post<ExerciseResponse>('/exercises', input),
   setActive: (id: string, active: boolean) => apiClient.put<ExerciseResponse>(`/exercises/${id}`, { active }),
   remove: (id: string) => apiClient.delete(`/exercises/${id}`),
+  getHistory: (id: string, excludeWorkoutId?: string) =>
+    apiClient.get<ExerciseHistoryResponse>(
+      `/exercises/${id}/history${excludeWorkoutId ? `?excludeWorkoutId=${excludeWorkoutId}` : ''}`,
+    ),
 };

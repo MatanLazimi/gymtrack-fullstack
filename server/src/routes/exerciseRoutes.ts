@@ -12,6 +12,7 @@ exerciseRouter.use(requireAuth);
 exerciseRouter.get('/', asyncHandler(exerciseController.list));
 exerciseRouter.post('/', validateBody(createExerciseSchema), asyncHandler(exerciseController.create));
 exerciseRouter.get('/:id', validateObjectIdParam('id'), asyncHandler(exerciseController.getById));
+exerciseRouter.get('/:id/history', validateObjectIdParam('id'), asyncHandler(exerciseController.history));
 exerciseRouter.put(
   '/:id',
   validateObjectIdParam('id'),
