@@ -18,7 +18,10 @@ const WORKOUT = {
   ],
 };
 
-const EXERCISES = [{ _id: 'ex1', name: 'לחיצות חזה', category: 'חזה', measurementUnit: 'kg', active: true }];
+const EXERCISES = [
+  { _id: 'ex1', name: 'לחיצות חזה', category: 'חזה', measurementUnit: 'kg', active: true },
+  { _id: 'ex2', name: 'סקוואט במכשיר', category: 'רגליים', measurementUnit: 'kg', active: true },
+];
 
 function mockFetchSequence(responses: Array<{ ok: boolean; status: number; body: unknown }>) {
   const fn = vi.fn();
@@ -88,5 +91,56 @@ describe('WorkoutPage', () => {
     await userEvent.click(screen.getByRole('button', { name: '+ הוספת סט' }));
 
     expect(await screen.findByText('65 ק"ג × 8')).toBeInTheDocument();
+  });
+
+  it('adds another exercise to the workout, only offering ones not already added', async () => {
+    const updatedWorkout = {
+      ...WORKOUT,
+      exercises: [
+        ...WORKOUT.exercises,
+        { _id: 'we2', exerciseId: 'ex2', exerciseName: 'סקוואט במכשיר', sets: [] },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      mockFetchSequence([
+        { ok: true, status: 200, body: { workout: WORKOUT } },
+        { ok: true, status: 200, body: { exercises: EXERCISES } },
+        { ok: true, status: 200, body: { workout: updatedWorkout } },
+      ]),
+    );
+
+    renderPage();
+    await screen.findByText('60 ק"ג × 12');
+
+    await userEvent.click(screen.getByRole('button', { name: '+ הוספת תרגיל' }));
+    expect(screen.queryByText('לחיצות חזה', { selector: 'button' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'סקוואט במכשיר' }));
+
+    expect(await screen.findByText('עדיין אין סטים לתרגיל הזה.')).toBeInTheDocument();
+  });
+
+  it('navigates back to the dashboard when finishing the workout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchSequence([
+        { ok: true, status: 200, body: { workout: WORKOUT } },
+        { ok: true, status: 200, body: { exercises: EXERCISES } },
+      ]),
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/workouts/w1']}>
+        <Routes>
+          <Route path="/workouts/:id" element={<WorkoutPage />} />
+          <Route path="/" element={<div>dashboard page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByText('60 ק"ג × 12');
+
+    await userEvent.click(screen.getByRole('button', { name: 'סיום אימון' }));
+
+    expect(await screen.findByText('dashboard page')).toBeInTheDocument();
   });
 });

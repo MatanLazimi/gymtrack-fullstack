@@ -163,3 +163,90 @@
 .addButton:disabled {
   opacity: 0.6;
 }
+
+.addExerciseToggle {
+  width: 100%;
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: var(--radius-md);
+  padding: 14px 0;
+}
+
+.addExercisePicker {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.addExercisePickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.closeButton {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+.category {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addExerciseRow {
+  width: 100%;
+  text-align: start;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 15px;
+  padding: 12px 14px;
+}
+
+.addExerciseRow:hover {
+  border-color: var(--color-accent);
+}
+
+.finishButton {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: var(--radius-md);
+  padding: 14px 0;
+  margin-top: 4px;
+}
+
+.finishButton:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
