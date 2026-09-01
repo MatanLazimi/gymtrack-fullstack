@@ -55,9 +55,42 @@
 .greeting {
   font-size: 20px;
   font-weight: 600;
+  margin-bottom: 10px;
 }
 
-.note {
+.startButton {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  text-decoration: none;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 17px;
+  border-radius: var(--radius-md);
+  padding: 16px 24px;
+}
+
+.exercisesLink {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  max-width: 280px;
+  text-decoration: none;
+  text-align: center;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: var(--radius-md);
+  padding: 13px 24px;
+}
+
+.exercisesLink:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
 }
