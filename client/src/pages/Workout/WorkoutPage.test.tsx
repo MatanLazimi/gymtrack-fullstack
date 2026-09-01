@@ -18,6 +18,20 @@ const WORKOUT = {
   ],
 };
 
+const PAST_WORKOUT = {
+  _id: 'w2',
+  userId: 'u1',
+  date: '2026-01-08T00:00:00.000Z',
+  exercises: [
+    {
+      _id: 'we1',
+      exerciseId: 'ex1',
+      exerciseName: 'לחיצות חזה',
+      sets: [{ _id: 's1', value: 60, reps: 12, hasAdditionalWeight: false, isPerSide: false }],
+    },
+  ],
+};
+
 const EXERCISES = [
   { _id: 'ex1', name: 'לחיצות חזה', category: 'חזה', measurementUnit: 'kg', active: true },
   { _id: 'ex2', name: 'סקוואט במכשיר', category: 'רגליים', measurementUnit: 'kg', active: true },
@@ -31,23 +45,27 @@ interface MockRoute {
 
 function mockFetchRouter(routes: MockRoute[]) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
+    const pathname = new URL(String(input)).pathname;
     const method = init?.method ?? 'GET';
-    const route = routes.find((r) => url.includes(r.url) && (r.method ?? 'GET') === method);
+    const route = routes.find((r) => pathname === r.url && (r.method ?? 'GET') === method);
     if (!route) {
-      throw new Error(`No mock route for ${method} ${url}`);
+      throw new Error(`No mock route for ${method} ${pathname}`);
     }
     return { ok: route.response.ok, status: route.response.status, json: async () => route.response.body };
   });
 }
 
-const noPreviousPerformance = { url: '/history', response: { ok: true, status: 200, body: { previousPerformance: null } } };
-const listExercises = { url: '/exercises', response: { ok: true, status: 200, body: { exercises: EXERCISES } } };
-const getWorkout = { url: '/workouts/w1', response: { ok: true, status: 200, body: { workout: WORKOUT } } };
+const noPreviousPerformance = {
+  url: '/api/exercises/ex1/history',
+  response: { ok: true, status: 200, body: { previousPerformance: null } },
+};
+const listExercises = { url: '/api/exercises', response: { ok: true, status: 200, body: { exercises: EXERCISES } } };
+const getWorkout = { url: '/api/workouts/w1', response: { ok: true, status: 200, body: { workout: WORKOUT } } };
+const getPastWorkout = { url: '/api/workouts/w2', response: { ok: true, status: 200, body: { workout: PAST_WORKOUT } } };
 
-function renderPage() {
+function renderPage(workoutId = 'w1') {
   return render(
-    <MemoryRouter initialEntries={['/workouts/w1']}>
+    <MemoryRouter initialEntries={[`/workouts/${workoutId}`]}>
       <Routes>
         <Route path="/workouts/:id" element={<WorkoutPage />} />
         <Route path="/" element={<div>dashboard page</div>} />
@@ -75,7 +93,7 @@ describe('WorkoutPage', () => {
       mockFetchRouter([
         getWorkout,
         {
-          url: '/exercises/ex1/history',
+          url: '/api/exercises/ex1/history',
           response: {
             ok: true,
             status: 200,
@@ -107,7 +125,11 @@ describe('WorkoutPage', () => {
         getWorkout,
         listExercises,
         noPreviousPerformance,
-        { url: '/workouts/w1', method: 'PUT', response: { ok: true, status: 200, body: { workout: updatedWorkout } } },
+        {
+          url: '/api/workouts/w1',
+          method: 'PUT',
+          response: { ok: true, status: 200, body: { workout: updatedWorkout } },
+        },
       ]),
     );
 
@@ -135,7 +157,11 @@ describe('WorkoutPage', () => {
         getWorkout,
         listExercises,
         noPreviousPerformance,
-        { url: '/workouts/w1', method: 'PUT', response: { ok: true, status: 200, body: { workout: updatedWorkout } } },
+        {
+          url: '/api/workouts/w1',
+          method: 'PUT',
+          response: { ok: true, status: 200, body: { workout: updatedWorkout } },
+        },
       ]),
     );
 
@@ -158,5 +184,17 @@ describe('WorkoutPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'סיום אימון' }));
 
     expect(await screen.findByText('dashboard page')).toBeInTheDocument();
+  });
+
+  it('opens a past workout in view-only mode, with no way to log or add sets', async () => {
+    vi.stubGlobal('fetch', mockFetchRouter([getPastWorkout, listExercises]));
+
+    renderPage('w2');
+
+    expect(await screen.findByText('60 ק"ג × 12')).toBeInTheDocument();
+    expect(screen.getByText('לצפייה בלבד')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('משקל')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ הוספת תרגיל' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'סיום אימון' })).not.toBeInTheDocument();
   });
 });

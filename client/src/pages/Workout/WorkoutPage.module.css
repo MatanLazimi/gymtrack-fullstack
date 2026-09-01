@@ -29,9 +29,25 @@
 }
 
 .title {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 19px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lockedBadge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 5px 10px;
 }
 
 .content {
