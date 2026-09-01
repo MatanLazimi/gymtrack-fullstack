@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { exerciseApi } from '../../services/api/exerciseApi';
 import { workoutApi } from '../../services/api/workoutApi';
-import type { MeasurementUnit } from '../../types/exercise';
+import type { Exercise, MeasurementUnit } from '../../types/exercise';
 import type { SetInput, Workout, WorkoutExercise } from '../../types/workout';
 import { toUserMessage } from '../../utils/errorMessages';
 import { formatSet } from '../../utils/formatSet';
+import { groupExercisesByCategory } from '../../utils/groupExercisesByCategory';
 import styles from './WorkoutPage.module.css';
 
 function ExerciseSetLogger({
@@ -111,9 +112,11 @@ function ExerciseSetLogger({
 
 export function WorkoutPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [workout, setWorkout] = useState<Workout | null>(null);
-  const [unitByExerciseId, setUnitByExerciseId] = useState<Record<string, MeasurementUnit>>({});
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,11 +127,7 @@ export function WorkoutPage() {
       .then(([workoutResponse, exerciseResponse]) => {
         if (isCancelled) return;
         setWorkout(workoutResponse.workout);
-        const units: Record<string, MeasurementUnit> = {};
-        for (const exercise of exerciseResponse.exercises) {
-          units[exercise._id] = exercise.measurementUnit;
-        }
-        setUnitByExerciseId(units);
+        setExercises(exerciseResponse.exercises);
       })
       .catch((fetchError) => {
         if (!isCancelled) setError(toUserMessage(fetchError));
@@ -141,6 +140,16 @@ export function WorkoutPage() {
       isCancelled = true;
     };
   }, [id]);
+
+  const unitByExerciseId: Record<string, MeasurementUnit> = {};
+  for (const exercise of exercises) {
+    unitByExerciseId[exercise._id] = exercise.measurementUnit;
+  }
+
+  const addableExercises = exercises.filter(
+    (exercise) => exercise.active && !workout?.exercises.some((we) => we.exerciseId === exercise._id),
+  );
+  const addableGroups = groupExercisesByCategory(addableExercises);
 
   const handleAddSet = async (exerciseId: string, setInput: SetInput) => {
     if (!workout) return;
@@ -157,6 +166,21 @@ export function WorkoutPage() {
     }
   };
 
+  const handleAddExercise = async (exercise: Exercise) => {
+    if (!workout) return;
+    const updatedExercises = [
+      ...workout.exercises,
+      { _id: 'pending', exerciseId: exercise._id, exerciseName: exercise.name, sets: [] },
+    ];
+    try {
+      const response = await workoutApi.updateExercises(workout._id, updatedExercises);
+      setWorkout(response.workout);
+      setIsAddingExercise(false);
+    } catch (addExerciseError) {
+      setError(toUserMessage(addExerciseError));
+    }
+  };
+
   if (isLoading) {
     return <div className={styles.screen} />;
   }
@@ -164,7 +188,7 @@ export function WorkoutPage() {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <Link to="/" className={styles.back} aria-label="חזרה">
+        <Link to="/" className={styles.back} aria-label="חזרה לדשבורד">
           ←
         </Link>
         <h1 className={styles.title}>אימון פעיל</h1>
@@ -185,6 +209,47 @@ export function WorkoutPage() {
             onAddSet={(setInput) => handleAddSet(exercise.exerciseId, setInput)}
           />
         ))}
+
+        {!isAddingExercise && (
+          <button type="button" className={styles.addExerciseToggle} onClick={() => setIsAddingExercise(true)}>
+            + הוספת תרגיל
+          </button>
+        )}
+
+        {isAddingExercise && (
+          <div className={styles.addExercisePicker}>
+            <div className={styles.addExercisePickerHeader}>
+              <span>בחירת תרגיל להוספה</span>
+              <button type="button" className={styles.closeButton} onClick={() => setIsAddingExercise(false)}>
+                סגירה
+              </button>
+            </div>
+            {addableGroups.length === 0 && (
+              <p className={styles.noSets}>כל התרגילים הפעילים כבר באימון הזה.</p>
+            )}
+            {addableGroups.map((group) => (
+              <div key={group.category}>
+                <p className={styles.category}>{group.category}</p>
+                <div className={styles.list}>
+                  {group.exercises.map((exercise) => (
+                    <button
+                      key={exercise._id}
+                      type="button"
+                      className={styles.addExerciseRow}
+                      onClick={() => handleAddExercise(exercise)}
+                    >
+                      {exercise.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button type="button" className={styles.finishButton} onClick={() => navigate('/')}>
+          סיום אימון
+        </button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { workoutApi } from '../../services/api/workoutApi';
 import type { Exercise } from '../../types/exercise';
 import { toUserMessage } from '../../utils/errorMessages';
 import { groupExercisesByCategory } from '../../utils/groupExercisesByCategory';
+import { isToday } from '../../utils/isToday';
 import styles from './NewWorkoutPage.module.css';
 
 export function NewWorkoutPage() {
@@ -17,21 +18,31 @@ export function NewWorkoutPage() {
 
   useEffect(() => {
     let isCancelled = false;
-    exerciseApi
-      .list()
-      .then((response) => {
-        if (!isCancelled) setExercises(response.exercises.filter((exercise) => exercise.active));
+
+    Promise.all([workoutApi.list(), exerciseApi.list()])
+      .then(([workoutResponse, exerciseResponse]) => {
+        if (isCancelled) return;
+
+        const todaysWorkout = workoutResponse.workouts.find((workout) => isToday(workout.date));
+        if (todaysWorkout) {
+          navigate(`/workouts/${todaysWorkout._id}`, { replace: true });
+          return;
+        }
+
+        setExercises(exerciseResponse.exercises.filter((exercise) => exercise.active));
+        setIsLoading(false);
       })
       .catch((fetchError) => {
-        if (!isCancelled) setError(toUserMessage(fetchError));
-      })
-      .finally(() => {
-        if (!isCancelled) setIsLoading(false);
+        if (!isCancelled) {
+          setError(toUserMessage(fetchError));
+          setIsLoading(false);
+        }
       });
+
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [navigate]);
 
   const toggleSelected = (id: string) => {
     setSelectedIds((current) => {
@@ -59,6 +70,10 @@ export function NewWorkoutPage() {
 
   const groups = groupExercisesByCategory(exercises);
 
+  if (isLoading) {
+    return <div className={styles.screen} />;
+  }
+
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -75,7 +90,7 @@ export function NewWorkoutPage() {
           </p>
         )}
 
-        {!isLoading && groups.length === 0 && (
+        {groups.length === 0 && (
           <p className={styles.empty}>
             אין עדיין תרגילים פעילים. אפשר להוסיף תרגילים <Link to="/exercises">במאגר התרגילים</Link>.
           </p>
