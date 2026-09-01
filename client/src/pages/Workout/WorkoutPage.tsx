@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { exerciseApi } from '../../services/api/exerciseApi';
 import { workoutApi } from '../../services/api/workoutApi';
 import type { Exercise, MeasurementUnit } from '../../types/exercise';
-import type { SetInput, Workout, WorkoutExercise } from '../../types/workout';
+import type { PreviousPerformance, SetInput, Workout, WorkoutExercise } from '../../types/workout';
 import { toUserMessage } from '../../utils/errorMessages';
 import { formatSet } from '../../utils/formatSet';
 import { groupExercisesByCategory } from '../../utils/groupExercisesByCategory';
@@ -12,10 +12,12 @@ import styles from './WorkoutPage.module.css';
 function ExerciseSetLogger({
   exercise,
   measurementUnit,
+  workoutId,
   onAddSet,
 }: {
   exercise: WorkoutExercise;
   measurementUnit: MeasurementUnit;
+  workoutId: string;
   onAddSet: (setInput: SetInput) => Promise<void>;
 }) {
   const [value, setValue] = useState('');
@@ -23,6 +25,22 @@ function ExerciseSetLogger({
   const [hasAdditionalWeight, setHasAdditionalWeight] = useState(false);
   const [isPerSide, setIsPerSide] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previousPerformance, setPreviousPerformance] = useState<PreviousPerformance | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+    exerciseApi
+      .getHistory(exercise.exerciseId, workoutId)
+      .then((response) => {
+        if (!isCancelled) setPreviousPerformance(response.previousPerformance);
+      })
+      .catch(() => {
+        // Previous performance is a nice-to-have hint; a failed lookup shouldn't block logging sets.
+      });
+    return () => {
+      isCancelled = true;
+    };
+  }, [exercise.exerciseId, workoutId]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -49,6 +67,12 @@ function ExerciseSetLogger({
         <span className={styles.exerciseName}>{exercise.exerciseName}</span>
         <span className={styles.unitBadge}>{measurementUnit === 'kg' ? 'ק"ג' : 'חור'}</span>
       </div>
+
+      {previousPerformance && (
+        <p className={styles.previousPerformance}>
+          פעם קודמת: {previousPerformance.sets.map((set) => formatSet(set, measurementUnit)).join(', ')}
+        </p>
+      )}
 
       <div className={styles.setList}>
         {exercise.sets.length === 0 && <p className={styles.noSets}>עדיין אין סטים לתרגיל הזה.</p>}
@@ -206,6 +230,7 @@ export function WorkoutPage() {
             key={exercise._id}
             exercise={exercise}
             measurementUnit={unitByExerciseId[exercise.exerciseId] ?? 'kg'}
+            workoutId={workout._id}
             onAddSet={(setInput) => handleAddSet(exercise.exerciseId, setInput)}
           />
         ))}

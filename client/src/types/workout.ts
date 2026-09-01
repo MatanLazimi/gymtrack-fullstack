@@ -26,3 +26,9 @@ export interface SetInput {
   hasAdditionalWeight: boolean;
   isPerSide: boolean;
 }
+
+export interface PreviousPerformance {
+  date: string;
+  exerciseName: string;
+  sets: WorkoutSet[];
+}
