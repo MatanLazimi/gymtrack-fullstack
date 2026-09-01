@@ -28,7 +28,9 @@ export function DashboardPage() {
         <p className={styles.greeting}>
           שלום, <bdi>{user?.email}</bdi>
         </p>
-        <p className={styles.note}>ניהול אימונים בדרך. בינתיים אפשר לנהל את מאגר התרגילים.</p>
+        <Link to="/workouts/new" className={styles.startButton}>
+          התחלת אימון
+        </Link>
         <Link to="/exercises" className={styles.exercisesLink}>
           מאגר תרגילים
         </Link>
