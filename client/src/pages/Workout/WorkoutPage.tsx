@@ -6,18 +6,22 @@ import type { Exercise, MeasurementUnit } from '../../types/exercise';
 import type { PreviousPerformance, SetInput, Workout, WorkoutExercise } from '../../types/workout';
 import { toUserMessage } from '../../utils/errorMessages';
 import { formatSet } from '../../utils/formatSet';
+import { formatWorkoutDate } from '../../utils/formatWorkoutDate';
 import { groupExercisesByCategory } from '../../utils/groupExercisesByCategory';
+import { isToday } from '../../utils/isToday';
 import styles from './WorkoutPage.module.css';
 
 function ExerciseSetLogger({
   exercise,
   measurementUnit,
   workoutId,
+  readOnly,
   onAddSet,
 }: {
   exercise: WorkoutExercise;
   measurementUnit: MeasurementUnit;
   workoutId: string;
+  readOnly: boolean;
   onAddSet: (setInput: SetInput) => Promise<void>;
 }) {
   const [value, setValue] = useState('');
@@ -28,6 +32,7 @@ function ExerciseSetLogger({
   const [previousPerformance, setPreviousPerformance] = useState<PreviousPerformance | null>(null);
 
   useEffect(() => {
+    if (readOnly) return;
     let isCancelled = false;
     exerciseApi
       .getHistory(exercise.exerciseId, workoutId)
@@ -40,7 +45,7 @@ function ExerciseSetLogger({
     return () => {
       isCancelled = true;
     };
-  }, [exercise.exerciseId, workoutId]);
+  }, [exercise.exerciseId, workoutId, readOnly]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -68,7 +73,7 @@ function ExerciseSetLogger({
         <span className={styles.unitBadge}>{measurementUnit === 'kg' ? 'ק"ג' : 'חור'}</span>
       </div>
 
-      {previousPerformance && (
+      {!readOnly && previousPerformance && (
         <p className={styles.previousPerformance}>
           פעם קודמת: {previousPerformance.sets.map((set) => formatSet(set, measurementUnit)).join(', ')}
         </p>
@@ -84,52 +89,58 @@ function ExerciseSetLogger({
         ))}
       </div>
 
-      <form className={styles.setForm} onSubmit={handleSubmit}>
-        <div className={styles.row}>
-          <input
-            className={styles.input}
-            type="number"
-            inputMode="decimal"
-            step="0.5"
-            min="0"
-            placeholder={measurementUnit === 'kg' ? 'משקל' : 'חור'}
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            required
-          />
-          <input
-            className={styles.input}
-            type="number"
-            inputMode="numeric"
-            min="0"
-            placeholder="חזרות"
-            value={reps}
-            onChange={(event) => setReps(event.target.value)}
-            required
-          />
-        </div>
-
-        {measurementUnit === 'kg' && (
-          <div className={styles.flags}>
-            <label className={styles.flagLabel}>
-              <input
-                type="checkbox"
-                checked={hasAdditionalWeight}
-                onChange={(event) => setHasAdditionalWeight(event.target.checked)}
-              />
-              תוספת
-            </label>
-            <label className={styles.flagLabel}>
-              <input type="checkbox" checked={isPerSide} onChange={(event) => setIsPerSide(event.target.checked)} />
-              כל צד
-            </label>
+      {!readOnly && (
+        <form className={styles.setForm} onSubmit={handleSubmit}>
+          <div className={styles.row}>
+            <input
+              className={styles.input}
+              type="number"
+              inputMode="decimal"
+              step="0.5"
+              min="0"
+              placeholder={measurementUnit === 'kg' ? 'משקל' : 'חור'}
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              required
+            />
+            <input
+              className={styles.input}
+              type="number"
+              inputMode="numeric"
+              min="0"
+              placeholder="חזרות"
+              value={reps}
+              onChange={(event) => setReps(event.target.value)}
+              required
+            />
           </div>
-        )}
 
-        <button type="submit" className={styles.addButton} disabled={isSubmitting}>
-          {isSubmitting ? 'מוסיף…' : '+ הוספת סט'}
-        </button>
-      </form>
+          {measurementUnit === 'kg' && (
+            <div className={styles.flags}>
+              <label className={styles.flagLabel}>
+                <input
+                  type="checkbox"
+                  checked={hasAdditionalWeight}
+                  onChange={(event) => setHasAdditionalWeight(event.target.checked)}
+                />
+                תוספת
+              </label>
+              <label className={styles.flagLabel}>
+                <input
+                  type="checkbox"
+                  checked={isPerSide}
+                  onChange={(event) => setIsPerSide(event.target.checked)}
+                />
+                כל צד
+              </label>
+            </div>
+          )}
+
+          <button type="submit" className={styles.addButton} disabled={isSubmitting}>
+            {isSubmitting ? 'מוסיף…' : '+ הוספת סט'}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
@@ -170,13 +181,15 @@ export function WorkoutPage() {
     unitByExerciseId[exercise._id] = exercise.measurementUnit;
   }
 
+  const isLocked = workout ? !isToday(workout.date) : false;
+
   const addableExercises = exercises.filter(
     (exercise) => exercise.active && !workout?.exercises.some((we) => we.exerciseId === exercise._id),
   );
   const addableGroups = groupExercisesByCategory(addableExercises);
 
   const handleAddSet = async (exerciseId: string, setInput: SetInput) => {
-    if (!workout) return;
+    if (!workout || isLocked) return;
     const updatedExercises = workout.exercises.map((exercise) =>
       exercise.exerciseId === exerciseId
         ? { ...exercise, sets: [...exercise.sets, { ...setInput, _id: 'pending' }] }
@@ -191,7 +204,7 @@ export function WorkoutPage() {
   };
 
   const handleAddExercise = async (exercise: Exercise) => {
-    if (!workout) return;
+    if (!workout || isLocked) return;
     const updatedExercises = [
       ...workout.exercises,
       { _id: 'pending', exerciseId: exercise._id, exerciseName: exercise.name, sets: [] },
@@ -215,7 +228,8 @@ export function WorkoutPage() {
         <Link to="/" className={styles.back} aria-label="חזרה לדשבורד">
           ←
         </Link>
-        <h1 className={styles.title}>אימון פעיל</h1>
+        <h1 className={styles.title}>{isLocked && workout ? formatWorkoutDate(workout.date) : 'אימון פעיל'}</h1>
+        {isLocked && <span className={styles.lockedBadge}>לצפייה בלבד</span>}
       </header>
 
       <div className={styles.content}>
@@ -231,17 +245,18 @@ export function WorkoutPage() {
             exercise={exercise}
             measurementUnit={unitByExerciseId[exercise.exerciseId] ?? 'kg'}
             workoutId={workout._id}
+            readOnly={isLocked}
             onAddSet={(setInput) => handleAddSet(exercise.exerciseId, setInput)}
           />
         ))}
 
-        {!isAddingExercise && (
+        {!isLocked && !isAddingExercise && (
           <button type="button" className={styles.addExerciseToggle} onClick={() => setIsAddingExercise(true)}>
             + הוספת תרגיל
           </button>
         )}
 
-        {isAddingExercise && (
+        {!isLocked && isAddingExercise && (
           <div className={styles.addExercisePicker}>
             <div className={styles.addExercisePickerHeader}>
               <span>בחירת תרגיל להוספה</span>
@@ -272,9 +287,11 @@ export function WorkoutPage() {
           </div>
         )}
 
-        <button type="button" className={styles.finishButton} onClick={() => navigate('/')}>
-          סיום אימון
-        </button>
+        {!isLocked && (
+          <button type="button" className={styles.finishButton} onClick={() => navigate('/')}>
+            סיום אימון
+          </button>
+        )}
       </div>
     </div>
   );
