@@ -1,4 +1,6 @@
 import type { Request, Response } from 'express';
+import { Types } from 'mongoose';
+import { ApiError } from '../middleware/errorHandler.js';
 import * as exerciseService from '../services/exerciseService.js';
 import * as workoutService from '../services/workoutService.js';
 import { requireUserId } from '../utils/requireUserId.js';
@@ -30,6 +32,9 @@ export async function remove(req: Request, res: Response): Promise<void> {
 
 export async function history(req: Request, res: Response): Promise<void> {
   const excludeWorkoutId = typeof req.query.excludeWorkoutId === 'string' ? req.query.excludeWorkoutId : undefined;
+  if (excludeWorkoutId && !Types.ObjectId.isValid(excludeWorkoutId)) {
+    throw new ApiError(400, 'Invalid excludeWorkoutId');
+  }
   const previousPerformance = await workoutService.getPreviousPerformance(
     requireUserId(req),
     req.params.id,

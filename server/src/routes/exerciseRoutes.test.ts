@@ -150,6 +150,14 @@ describe('GET /api/exercises/:id/history', () => {
     expect(response.body.previousPerformance.sets).toEqual([expect.objectContaining({ value: 60, reps: 12 })]);
   });
 
+  it('rejects a malformed excludeWorkoutId with 400', async () => {
+    const created = await ExerciseModel.create(exercise);
+
+    const response = await authenticatedAgent.get(`/api/exercises/${created.id}/history?excludeWorkoutId=not-an-id`);
+
+    expect(response.status).toBe(400);
+  });
+
   it('excludes the given workout id, e.g. the one currently being edited', async () => {
     const created = await ExerciseModel.create(exercise);
     const userId = (await UserModel.findOne({ email: TEST_USER_EMAIL }))!._id;

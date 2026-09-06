@@ -8,31 +8,28 @@ export interface PreviousPerformance {
   sets: Workout['exercises'][number]['sets'];
 }
 
-const RECENT_WORKOUTS_TO_SCAN = 5;
-
 export async function getPreviousPerformance(
   userId: string,
   exerciseId: string,
   excludeWorkoutId?: string,
 ): Promise<PreviousPerformance | null> {
-  const filter: Record<string, unknown> = { userId, 'exercises.exerciseId': exerciseId };
+  const filter: Record<string, unknown> = {
+    userId,
+    exercises: { $elemMatch: { exerciseId, 'sets.0': { $exists: true } } },
+  };
   if (excludeWorkoutId) {
     filter._id = { $ne: excludeWorkoutId };
   }
 
-  const candidates = await WorkoutModel.find(filter)
-    .sort({ date: -1 })
-    .limit(RECENT_WORKOUTS_TO_SCAN)
-    .lean<Workout[]>();
-
-  for (const workout of candidates) {
-    const match = workout.exercises.find((exercise) => exercise.exerciseId.toString() === exerciseId);
-    if (match && match.sets.length > 0) {
-      return { date: workout.date, exerciseName: match.exerciseName, sets: match.sets };
-    }
+  const workout = await WorkoutModel.findOne(filter).sort({ date: -1 }).lean<Workout | null>();
+  if (!workout) {
+    return null;
   }
 
-  return null;
+  const match = workout.exercises.find(
+    (exercise) => exercise.exerciseId.toString() === exerciseId && exercise.sets.length > 0,
+  );
+  return match ? { date: workout.date, exerciseName: match.exerciseName, sets: match.sets } : null;
 }
 
 export function listWorkouts(userId: string): Promise<Workout[]> {

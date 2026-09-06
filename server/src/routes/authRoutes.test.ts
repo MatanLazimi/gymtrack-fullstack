@@ -44,6 +44,16 @@ describe('POST /api/auth/register', () => {
 
     expect(response.status).toBe(400);
   });
+
+  it('resolves a concurrent duplicate registration as 409, not a 500 from the race', async () => {
+    const [first, second] = await Promise.all([
+      request(app).post('/api/auth/register').send(credentials),
+      request(app).post('/api/auth/register').send(credentials),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([201, 409]);
+  });
 });
 
 describe('POST /api/auth/login', () => {
