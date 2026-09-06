@@ -7,8 +7,10 @@ know what to beat.
 
 ## Status
 
-🚧 Early bootstrap — Authentication, Exercise Library, and Workout tracking
-are being built incrementally. See open [Issues](../../issues) for progress.
+✅ MVP complete — Authentication, Exercise Library, Workout tracking, History,
+and View/Edit Lock Mode are all implemented and tested. Wrapping up the
+Testing pass before the first tagged release. See open
+[Issues](../../issues) for anything still in flight.
 
 ## Features (MVP)
 
