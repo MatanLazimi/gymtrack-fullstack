@@ -130,6 +130,26 @@ describe('GET /api/exercises/:id/history', () => {
     expect(response.body.previousPerformance.sets).toEqual([expect.objectContaining({ value: 65, reps: 10 })]);
   });
 
+  it('skips a more recent workout that has the exercise but no logged sets yet', async () => {
+    const created = await ExerciseModel.create(exercise);
+    const userId = (await UserModel.findOne({ email: TEST_USER_EMAIL }))!._id;
+    await WorkoutModel.create({
+      userId,
+      date: new Date('2026-01-01'),
+      exercises: [{ exerciseId: created.id, exerciseName: created.name, sets: [{ value: 60, reps: 12 }] }],
+    });
+    await WorkoutModel.create({
+      userId,
+      date: new Date('2026-01-08'),
+      exercises: [{ exerciseId: created.id, exerciseName: created.name, sets: [] }],
+    });
+
+    const response = await authenticatedAgent.get(`/api/exercises/${created.id}/history`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.previousPerformance.sets).toEqual([expect.objectContaining({ value: 60, reps: 12 })]);
+  });
+
   it('excludes the given workout id, e.g. the one currently being edited', async () => {
     const created = await ExerciseModel.create(exercise);
     const userId = (await UserModel.findOne({ email: TEST_USER_EMAIL }))!._id;
