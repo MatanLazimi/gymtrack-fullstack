@@ -53,6 +53,17 @@ describe('HistoryPage', () => {
     expect(screen.getByText(/2 סטים/)).toBeInTheDocument();
   });
 
+  it('shows an error message when loading past workouts fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({ error: 'boom' }) }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('משהו השתבש. נסה/י שוב.');
+  });
+
   it('links each entry to its workout detail page', async () => {
     vi.stubGlobal(
       'fetch',
