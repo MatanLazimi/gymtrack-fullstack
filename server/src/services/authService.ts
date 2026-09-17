@@ -20,9 +20,19 @@ export async function registerUser({ email, password }: Credentials): Promise<Au
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const user = await UserModel.create({ email, passwordHash });
+  try {
+    const user = await UserModel.create({ email, passwordHash });
+    return buildAuthResult(user.id, user.email);
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new ApiError(409, 'An account with this email already exists');
+    }
+    throw error;
+  }
+}
 
-  return buildAuthResult(user.id, user.email);
+function isDuplicateKeyError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
 export async function loginUser({ email, password }: Credentials): Promise<AuthResult> {
