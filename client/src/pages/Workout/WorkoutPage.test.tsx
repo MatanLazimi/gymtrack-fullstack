@@ -163,11 +163,25 @@ describe('WorkoutPage', () => {
     renderPage();
     await screen.findByText('60 ק"ג × 12');
 
-    await userEvent.type(screen.getByPlaceholderText('משקל'), '65');
-    await userEvent.type(screen.getByPlaceholderText('חזרות'), '8');
+    const weightInput = screen.getByPlaceholderText('משקל');
+    const repsInput = screen.getByPlaceholderText('חזרות');
+    await userEvent.clear(weightInput);
+    await userEvent.type(weightInput, '65');
+    await userEvent.clear(repsInput);
+    await userEvent.type(repsInput, '8');
     await userEvent.click(screen.getByRole('button', { name: '+ הוספת סט' }));
 
     expect(await screen.findByText('65 ק"ג × 8')).toBeInTheDocument();
+  });
+
+  it('pre-fills the add-set form with the last logged set, so consecutive sets need no retyping', async () => {
+    vi.stubGlobal('fetch', mockFetchRouter([getWorkout, listExercises, noPreviousPerformance]));
+
+    renderPage();
+    await screen.findByText('60 ק"ג × 12');
+
+    expect(screen.getByPlaceholderText('משקל')).toHaveValue(60);
+    expect(screen.getByPlaceholderText('חזרות')).toHaveValue(12);
   });
 
   it('adds another exercise to the workout, only offering ones not already added', async () => {

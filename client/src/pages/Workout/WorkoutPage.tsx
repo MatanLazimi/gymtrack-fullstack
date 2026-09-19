@@ -138,10 +138,13 @@ function ExerciseSetLogger({
     canMoveDown: boolean;
   };
 }) {
-  const [value, setValue] = useState('');
-  const [reps, setReps] = useState('');
-  const [hasAdditionalWeight, setHasAdditionalWeight] = useState(false);
-  const [isPerSide, setIsPerSide] = useState(false);
+  const lastLoggedSet = exercise.sets[exercise.sets.length - 1] as SetInput | undefined;
+  // Pre-fill from the last logged set in this exercise (not just cleared each time) - consecutive
+  // sets are usually close in weight/reps, so this saves re-typing the same numbers every set.
+  const [value, setValue] = useState(lastLoggedSet ? String(lastLoggedSet.value) : '');
+  const [reps, setReps] = useState(lastLoggedSet ? String(lastLoggedSet.reps) : '');
+  const [hasAdditionalWeight, setHasAdditionalWeight] = useState(lastLoggedSet?.hasAdditionalWeight ?? false);
+  const [isPerSide, setIsPerSide] = useState(lastLoggedSet?.isPerSide ?? false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previousPerformance, setPreviousPerformance] = useState<PreviousPerformance | null>(null);
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
