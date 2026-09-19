@@ -34,6 +34,9 @@ export function DashboardPage() {
         <Link to="/history" className={styles.exercisesLink}>
           היסטוריית אימונים
         </Link>
+        <Link to="/routines" className={styles.exercisesLink}>
+          תבניות אימון
+        </Link>
         <Link to="/exercises" className={styles.exercisesLink}>
           מאגר תרגילים
         </Link>

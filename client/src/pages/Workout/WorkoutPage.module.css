@@ -81,6 +81,42 @@
   margin-bottom: 10px;
 }
 
+.reorderControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dragHandle,
+.moveButton {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: calc(var(--radius-md) - 4px);
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dragHandle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.moveButton:disabled {
+  opacity: 0.35;
+}
+
 .previousPerformance {
   font-size: 13px;
   color: var(--color-accent);
@@ -88,6 +124,7 @@
 }
 
 .exerciseName {
+  flex: 1;
   font-weight: 700;
   font-size: 16px;
 }
@@ -123,6 +160,75 @@
 .setIndex {
   color: var(--color-text-muted);
   min-width: 22px;
+}
+
+.setValue {
+  flex: 1;
+}
+
+.setRowActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.iconButton {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.iconButton:hover {
+  color: var(--color-text);
+}
+
+.deleteButton:hover {
+  color: var(--color-danger);
+}
+
+.editSetForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.editSetActions {
+  display: flex;
+  gap: 8px;
+}
+
+.editSetActions .addButton {
+  flex: 1;
+}
+
+.secondaryButton {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 11px 16px;
+}
+
+.unlockButton {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
 }
 
 .noSets {

@@ -6,6 +6,7 @@ import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { authRouter } from './routes/authRoutes.js';
 import { exerciseRouter } from './routes/exerciseRoutes.js';
+import { routineRouter } from './routes/routineRoutes.js';
 import { workoutRouter } from './routes/workoutRoutes.js';
 
 export function createApp(): Express {
@@ -22,6 +23,7 @@ export function createApp(): Express {
 
   app.use('/api/auth', authRouter);
   app.use('/api/exercises', exerciseRouter);
+  app.use('/api/routines', routineRouter);
   app.use('/api/workouts', workoutRouter);
 
   app.use(notFoundHandler);

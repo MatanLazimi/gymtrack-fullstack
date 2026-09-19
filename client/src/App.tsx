@@ -4,6 +4,7 @@ import { AuthPage } from './pages/Auth/AuthPage';
 import { DashboardPage } from './pages/Dashboard/DashboardPage';
 import { ExercisesPage } from './pages/Exercises/ExercisesPage';
 import { HistoryPage } from './pages/History/HistoryPage';
+import { RoutinesPage } from './pages/Routines/RoutinesPage';
 import { NewWorkoutPage } from './pages/Workout/NewWorkoutPage';
 import { WorkoutPage } from './pages/Workout/WorkoutPage';
 
@@ -32,6 +33,14 @@ function App() {
         element={
           <ProtectedRoute>
             <HistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/routines"
+        element={
+          <ProtectedRoute>
+            <RoutinesPage />
           </ProtectedRoute>
         }
       />

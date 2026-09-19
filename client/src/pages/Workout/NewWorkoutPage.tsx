@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { exerciseApi } from '../../services/api/exerciseApi';
+import { routineApi } from '../../services/api/routineApi';
 import { workoutApi } from '../../services/api/workoutApi';
 import type { Exercise } from '../../types/exercise';
+import type { Routine } from '../../types/routine';
 import { toUserMessage } from '../../utils/errorMessages';
 import { groupExercisesByCategory } from '../../utils/groupExercisesByCategory';
 import { isToday } from '../../utils/isToday';
@@ -11,6 +13,7 @@ import styles from './NewWorkoutPage.module.css';
 export function NewWorkoutPage() {
   const navigate = useNavigate();
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
@@ -19,8 +22,8 @@ export function NewWorkoutPage() {
   useEffect(() => {
     let isCancelled = false;
 
-    Promise.all([workoutApi.list(), exerciseApi.list()])
-      .then(([workoutResponse, exerciseResponse]) => {
+    Promise.all([workoutApi.list(), exerciseApi.list(), routineApi.list()])
+      .then(([workoutResponse, exerciseResponse, routineResponse]) => {
         if (isCancelled) return;
 
         const todaysWorkout = workoutResponse.workouts.find((workout) => isToday(workout.date));
@@ -30,6 +33,7 @@ export function NewWorkoutPage() {
         }
 
         setExercises(exerciseResponse.exercises.filter((exercise) => exercise.active));
+        setRoutines(routineResponse.routines);
         setIsLoading(false);
       })
       .catch((fetchError) => {
@@ -43,6 +47,19 @@ export function NewWorkoutPage() {
       isCancelled = true;
     };
   }, [navigate]);
+
+  const handleStartFromRoutine = async (routine: Routine) => {
+    setError(null);
+    setIsStarting(true);
+    try {
+      const selected = routine.exercises.map(({ exerciseId, exerciseName }) => ({ exerciseId, exerciseName }));
+      const response = await workoutApi.create(selected);
+      navigate(`/workouts/${response.workout._id}`);
+    } catch (startError) {
+      setError(toUserMessage(startError));
+      setIsStarting(false);
+    }
+  };
 
   const toggleSelected = (id: string) => {
     setSelectedIds((current) => {
@@ -89,6 +106,28 @@ export function NewWorkoutPage() {
             {error}
           </p>
         )}
+
+        {routines.length > 0 && (
+          <div>
+            <p className={styles.category}>התחלה מתבנית</p>
+            <div className={styles.list}>
+              {routines.map((routine) => (
+                <button
+                  key={routine._id}
+                  type="button"
+                  className={styles.routineButton}
+                  disabled={isStarting}
+                  onClick={() => handleStartFromRoutine(routine)}
+                >
+                  <span>{routine.name}</span>
+                  <span className={styles.routineCount}>{routine.exercises.length} תרגילים</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {routines.length > 0 && <p className={styles.category}>או בחירה חופשית</p>}
 
         {groups.length === 0 && (
           <p className={styles.empty}>

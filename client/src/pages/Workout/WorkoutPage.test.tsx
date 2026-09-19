@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +15,14 @@ const WORKOUT = {
       exerciseName: 'לחיצות חזה',
       sets: [{ _id: 's1', value: 60, reps: 12, hasAdditionalWeight: false, isPerSide: false }],
     },
+  ],
+};
+
+const WORKOUT_WITH_TWO_EXERCISES = {
+  ...WORKOUT,
+  exercises: [
+    ...WORKOUT.exercises,
+    { _id: 'we2', exerciseId: 'ex2', exerciseName: 'סקוואט במכשיר', sets: [] },
   ],
 };
 
@@ -59,8 +67,16 @@ const noPreviousPerformance = {
   url: '/api/exercises/ex1/history',
   response: { ok: true, status: 200, body: { previousPerformance: null } },
 };
+const noPreviousPerformanceEx2 = {
+  url: '/api/exercises/ex2/history',
+  response: { ok: true, status: 200, body: { previousPerformance: null } },
+};
 const listExercises = { url: '/api/exercises', response: { ok: true, status: 200, body: { exercises: EXERCISES } } };
 const getWorkout = { url: '/api/workouts/w1', response: { ok: true, status: 200, body: { workout: WORKOUT } } };
+const getWorkoutWithTwoExercises = {
+  url: '/api/workouts/w1',
+  response: { ok: true, status: 200, body: { workout: WORKOUT_WITH_TWO_EXERCISES } },
+};
 const getPastWorkout = { url: '/api/workouts/w2', response: { ok: true, status: 200, body: { workout: PAST_WORKOUT } } };
 
 function renderPage(workoutId = 'w1') {
@@ -87,7 +103,7 @@ describe('WorkoutPage', () => {
     expect(await screen.findByText('60 ק"ג × 12')).toBeInTheDocument();
   });
 
-  it('shows a "previous time" hint when the exercise was logged before', async () => {
+  it('shows a "previous time" hint matched to the set position about to be logged', async () => {
     vi.stubGlobal(
       'fetch',
       mockFetchRouter([
@@ -97,7 +113,16 @@ describe('WorkoutPage', () => {
           response: {
             ok: true,
             status: 200,
-            body: { previousPerformance: { date: '2026-01-01', exerciseName: 'לחיצות חזה', sets: [{ _id: 'p1', value: 55, reps: 10, hasAdditionalWeight: false, isPerSide: false }] } },
+            body: {
+              previousPerformance: {
+                date: '2026-01-01',
+                exerciseName: 'לחיצות חזה',
+                sets: [
+                  { _id: 'p1', value: 50, reps: 12, hasAdditionalWeight: false, isPerSide: false },
+                  { _id: 'p2', value: 55, reps: 10, hasAdditionalWeight: false, isPerSide: false },
+                ],
+              },
+            },
           },
         },
         listExercises,
@@ -106,7 +131,9 @@ describe('WorkoutPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('פעם קודמת: 55 ק"ג × 10')).toBeInTheDocument();
+    // WORKOUT's exercise already has one logged set, so the next set to fill in is set #2 -
+    // the hint should show the previous performance at that same position, not the whole list.
+    expect(await screen.findByText('בפעם קודמת (סט 2): 55 ק"ג × 10')).toBeInTheDocument();
   });
 
   it('adds a new set through the form', async () => {
@@ -175,6 +202,56 @@ describe('WorkoutPage', () => {
     expect(await screen.findByText('עדיין אין סטים לתרגיל הזה.')).toBeInTheDocument();
   });
 
+  it('reorders exercises using the move-up/move-down buttons', async () => {
+    const reorderedWorkout = {
+      ...WORKOUT_WITH_TWO_EXERCISES,
+      exercises: [...WORKOUT_WITH_TWO_EXERCISES.exercises].reverse(),
+    };
+    vi.stubGlobal(
+      'fetch',
+      mockFetchRouter([
+        getWorkoutWithTwoExercises,
+        listExercises,
+        noPreviousPerformance,
+        noPreviousPerformanceEx2,
+        {
+          url: '/api/workouts/w1',
+          method: 'PUT',
+          response: { ok: true, status: 200, body: { workout: reorderedWorkout } },
+        },
+      ]),
+    );
+
+    renderPage();
+    await screen.findByText('60 ק"ג × 12');
+
+    const exerciseNamesInOrder = () =>
+      screen.getAllByText(/^(לחיצות חזה|סקוואט במכשיר)$/).map((el) => el.textContent);
+
+    expect(exerciseNamesInOrder()).toEqual(['לחיצות חזה', 'סקוואט במכשיר']);
+
+    await userEvent.click(screen.getByRole('button', { name: 'הזזת לחיצות חזה למטה' }));
+
+    await waitFor(() => {
+      expect(exerciseNamesInOrder()).toEqual(['סקוואט במכשיר', 'לחיצות חזה']);
+    });
+  });
+
+  it('disables the move-up button for the first exercise and move-down for the last', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchRouter([getWorkoutWithTwoExercises, listExercises, noPreviousPerformance, noPreviousPerformanceEx2]),
+    );
+
+    renderPage();
+    await screen.findByText('60 ק"ג × 12');
+
+    expect(screen.getByRole('button', { name: 'הזזת לחיצות חזה למעלה' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'הזזת סקוואט במכשיר למטה' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'הזזת לחיצות חזה למטה' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'הזזת סקוואט במכשיר למעלה' })).toBeEnabled();
+  });
+
   it('navigates back to the dashboard when finishing the workout', async () => {
     vi.stubGlobal('fetch', mockFetchRouter([getWorkout, listExercises, noPreviousPerformance]));
 
@@ -186,7 +263,7 @@ describe('WorkoutPage', () => {
     expect(await screen.findByText('dashboard page')).toBeInTheDocument();
   });
 
-  it('opens a past workout in view-only mode, with no way to log or add sets', async () => {
+  it('opens a past workout in view-only mode by default, with an option to unlock editing', async () => {
     vi.stubGlobal('fetch', mockFetchRouter([getPastWorkout, listExercises]));
 
     renderPage('w2');
@@ -196,5 +273,88 @@ describe('WorkoutPage', () => {
     expect(screen.queryByPlaceholderText('משקל')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ הוספת תרגיל' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'סיום אימון' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'עריכת אימון' })).toBeInTheDocument();
+  });
+
+  it('unlocks editing on a past workout after clicking the unlock button', async () => {
+    vi.stubGlobal('fetch', mockFetchRouter([getPastWorkout, listExercises, noPreviousPerformance]));
+
+    renderPage('w2');
+    await screen.findByText('60 ק"ג × 12');
+
+    await userEvent.click(screen.getByRole('button', { name: 'עריכת אימון' }));
+
+    expect(screen.queryByText('לצפייה בלבד')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText('משקל')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ הוספת תרגיל' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'סיום עריכה' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'נעילה מחדש' })).toBeInTheDocument();
+  });
+
+  it("edits an existing set's value through the inline edit form", async () => {
+    const updatedWorkout = {
+      ...WORKOUT,
+      exercises: [
+        {
+          ...WORKOUT.exercises[0],
+          sets: [{ _id: 's1', value: 70, reps: 12, hasAdditionalWeight: false, isPerSide: false }],
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      mockFetchRouter([
+        getWorkout,
+        listExercises,
+        noPreviousPerformance,
+        {
+          url: '/api/workouts/w1',
+          method: 'PUT',
+          response: { ok: true, status: 200, body: { workout: updatedWorkout } },
+        },
+      ]),
+    );
+
+    renderPage();
+    await screen.findByText('60 ק"ג × 12');
+
+    await userEvent.click(screen.getByRole('button', { name: 'עריכת סט 1' }));
+    // The inline edit form and the add-set form both have a "משקל" field; the edit form renders first.
+    const weightInput = screen.getAllByPlaceholderText('משקל')[0];
+    await userEvent.clear(weightInput);
+    await userEvent.type(weightInput, '70');
+    await userEvent.click(screen.getByRole('button', { name: 'שמירה' }));
+
+    expect(await screen.findByText('70 ק"ג × 12')).toBeInTheDocument();
+  });
+
+  it('deletes an existing set', async () => {
+    const updatedWorkout = {
+      ...WORKOUT,
+      exercises: [{ ...WORKOUT.exercises[0], sets: [] }],
+    };
+    vi.stubGlobal(
+      'fetch',
+      mockFetchRouter([
+        getWorkout,
+        listExercises,
+        noPreviousPerformance,
+        {
+          url: '/api/workouts/w1',
+          method: 'PUT',
+          response: { ok: true, status: 200, body: { workout: updatedWorkout } },
+        },
+      ]),
+    );
+
+    renderPage();
+    await screen.findByText('60 ק"ג × 12');
+
+    await userEvent.click(screen.getByRole('button', { name: 'מחיקת סט 1' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('60 ק"ג × 12')).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText('עדיין אין סטים לתרגיל הזה.')).toBeInTheDocument();
   });
 });

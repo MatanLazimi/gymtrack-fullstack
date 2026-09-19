@@ -43,6 +43,7 @@ describe('NewWorkoutPage', () => {
       mockFetchSequence([
         { ok: true, status: 200, body: { workouts: [] } },
         { ok: true, status: 200, body: { exercises: EXERCISES } },
+        { ok: true, status: 200, body: { routines: [] } },
       ]),
     );
 
@@ -58,6 +59,7 @@ describe('NewWorkoutPage', () => {
       mockFetchSequence([
         { ok: true, status: 200, body: { workouts: [] } },
         { ok: true, status: 200, body: { exercises: EXERCISES } },
+        { ok: true, status: 200, body: { routines: [] } },
         { ok: true, status: 201, body: { workout: { _id: 'w1', exercises: [] } } },
       ]),
     );
@@ -76,6 +78,7 @@ describe('NewWorkoutPage', () => {
       mockFetchSequence([
         { ok: true, status: 200, body: { workouts: [{ _id: 'today-workout', date: new Date().toISOString() }] } },
         { ok: true, status: 200, body: { exercises: EXERCISES } },
+        { ok: true, status: 200, body: { routines: [] } },
       ]),
     );
 
@@ -83,5 +86,24 @@ describe('NewWorkoutPage', () => {
 
     expect(await screen.findByText('workout page')).toBeInTheDocument();
     expect(screen.queryByText('בחירת תרגילים')).not.toBeInTheDocument();
+  });
+
+  it('starts a workout from a saved routine without requiring manual exercise selection', async () => {
+    const routine = { _id: 'r1', name: 'דחיפה', exercises: [{ _id: 're1', exerciseId: '1', exerciseName: 'לחיצות חזה' }] };
+    vi.stubGlobal(
+      'fetch',
+      mockFetchSequence([
+        { ok: true, status: 200, body: { workouts: [] } },
+        { ok: true, status: 200, body: { exercises: EXERCISES } },
+        { ok: true, status: 200, body: { routines: [routine] } },
+        { ok: true, status: 201, body: { workout: { _id: 'w1', exercises: [] } } },
+      ]),
+    );
+
+    renderPicker();
+
+    await userEvent.click(await screen.findByRole('button', { name: /דחיפה/ }));
+
+    expect(await screen.findByText('workout page')).toBeInTheDocument();
   });
 });

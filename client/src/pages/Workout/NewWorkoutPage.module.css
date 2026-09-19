@@ -83,6 +83,33 @@
   padding: 40px 0;
 }
 
+.routineButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.routineButton:disabled {
+  opacity: 0.6;
+}
+
+.routineCount {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  background: var(--color-surface-raised);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
 .footer {
   position: fixed;
   bottom: 0;
