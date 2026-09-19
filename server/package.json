@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
-    "seed": "tsx src/scripts/seedExercises.ts"
+    "seed": "tsx src/scripts/seedExercises.ts",
+    "restore-workout": "tsx src/scripts/restoreWorkout.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -5,10 +5,14 @@ import { loginUser, registerUser } from '../services/authService.js';
 import { UserModel } from '../models/User.js';
 import { ApiError } from '../middleware/errorHandler.js';
 
+const IS_PRODUCTION = env.nodeEnv === 'production';
+
 const COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
-  secure: env.nodeEnv === 'production',
-  sameSite: 'lax',
+  secure: IS_PRODUCTION,
+  // Frontend and backend are deployed on different origins in production, so the cookie must be
+  // sent cross-site. `SameSite=None` requires `Secure`, which is only set once we're on HTTPS.
+  sameSite: IS_PRODUCTION ? 'none' : 'lax',
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
