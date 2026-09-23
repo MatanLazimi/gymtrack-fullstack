@@ -88,6 +88,37 @@ describe('NewWorkoutPage', () => {
     expect(screen.queryByText('בחירת תרגילים')).not.toBeInTheDocument();
   });
 
+  it('lists past workouts first and starts a new workout copying their exercises and sets', async () => {
+    const pastWorkout = {
+      _id: 'w0',
+      date: '2026-01-08T00:00:00.000Z',
+      exercises: [
+        {
+          _id: 'we1',
+          exerciseId: '1',
+          exerciseName: 'לחיצות חזה',
+          sets: [{ _id: 's1', value: 60, reps: 12, hasAdditionalWeight: false, isPerSide: false }],
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      mockFetchSequence([
+        { ok: true, status: 200, body: { workouts: [pastWorkout] } },
+        { ok: true, status: 200, body: { exercises: EXERCISES } },
+        { ok: true, status: 200, body: { routines: [] } },
+        { ok: true, status: 201, body: { workout: { _id: 'w1', exercises: [] } } },
+      ]),
+    );
+
+    renderPicker();
+
+    expect(await screen.findByText('התחלה מאימון קודם')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /לחיצות חזה/ }));
+
+    expect(await screen.findByText('workout page')).toBeInTheDocument();
+  });
+
   it('starts a workout from a saved routine without requiring manual exercise selection', async () => {
     const routine = { _id: 'r1', name: 'דחיפה', exercises: [{ _id: 're1', exerciseId: '1', exerciseName: 'לחיצות חזה' }] };
     vi.stubGlobal(

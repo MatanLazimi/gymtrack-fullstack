@@ -5,15 +5,21 @@ import { routineApi } from '../../services/api/routineApi';
 import { workoutApi } from '../../services/api/workoutApi';
 import type { Exercise } from '../../types/exercise';
 import type { Routine } from '../../types/routine';
+import type { Workout } from '../../types/workout';
 import { toUserMessage } from '../../utils/errorMessages';
+import { formatWorkoutDate } from '../../utils/formatWorkoutDate';
 import { groupExercisesByCategory } from '../../utils/groupExercisesByCategory';
 import { isToday } from '../../utils/isToday';
+import { summarizeWorkout } from '../../utils/summarizeWorkout';
 import styles from './NewWorkoutPage.module.css';
+
+const RECENT_WORKOUTS_LIMIT = 5;
 
 export function NewWorkoutPage() {
   const navigate = useNavigate();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [pastWorkouts, setPastWorkouts] = useState<Workout[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
@@ -34,6 +40,7 @@ export function NewWorkoutPage() {
 
         setExercises(exerciseResponse.exercises.filter((exercise) => exercise.active));
         setRoutines(routineResponse.routines);
+        setPastWorkouts(workoutResponse.workouts);
         setIsLoading(false);
       })
       .catch((fetchError) => {
@@ -53,6 +60,28 @@ export function NewWorkoutPage() {
     setIsStarting(true);
     try {
       const selected = routine.exercises.map(({ exerciseId, exerciseName }) => ({ exerciseId, exerciseName }));
+      const response = await workoutApi.create(selected);
+      navigate(`/workouts/${response.workout._id}`);
+    } catch (startError) {
+      setError(toUserMessage(startError));
+      setIsStarting(false);
+    }
+  };
+
+  const handleStartFromWorkout = async (workout: Workout) => {
+    setError(null);
+    setIsStarting(true);
+    try {
+      const selected = workout.exercises.map(({ exerciseId, exerciseName, sets }) => ({
+        exerciseId,
+        exerciseName,
+        sets: sets.map(({ value, reps, hasAdditionalWeight, isPerSide }) => ({
+          value,
+          reps,
+          hasAdditionalWeight,
+          isPerSide,
+        })),
+      }));
       const response = await workoutApi.create(selected);
       navigate(`/workouts/${response.workout._id}`);
     } catch (startError) {
@@ -107,6 +136,31 @@ export function NewWorkoutPage() {
           </p>
         )}
 
+        {pastWorkouts.length > 0 && (
+          <div>
+            <p className={styles.category}>התחלה מאימון קודם</p>
+            <div className={styles.list}>
+              {pastWorkouts.slice(0, RECENT_WORKOUTS_LIMIT).map((workout) => (
+                <button
+                  key={workout._id}
+                  type="button"
+                  className={styles.previousWorkoutButton}
+                  disabled={isStarting}
+                  onClick={() => handleStartFromWorkout(workout)}
+                >
+                  <span className={styles.previousWorkoutDate}>{formatWorkoutDate(workout.date)}</span>
+                  <span className={styles.previousWorkoutSummary}>{summarizeWorkout(workout)}</span>
+                </button>
+              ))}
+            </div>
+            {pastWorkouts.length > RECENT_WORKOUTS_LIMIT && (
+              <Link to="/history" className={styles.moreHistoryLink}>
+                לצפייה בכל ההיסטוריה
+              </Link>
+            )}
+          </div>
+        )}
+
         {routines.length > 0 && (
           <div>
             <p className={styles.category}>התחלה מתבנית</p>
@@ -127,7 +181,9 @@ export function NewWorkoutPage() {
           </div>
         )}
 
-        {routines.length > 0 && <p className={styles.category}>או בחירה חופשית</p>}
+        {(pastWorkouts.length > 0 || routines.length > 0) && (
+          <p className={styles.category}>או בחירה חופשית</p>
+        )}
 
         {groups.length === 0 && (
           <p className={styles.empty}>

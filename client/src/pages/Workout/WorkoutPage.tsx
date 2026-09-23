@@ -385,11 +385,13 @@ export function WorkoutPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [isEditUnlocked, setIsEditUnlocked] = useState(false);
+  const [isActiveViewOnly, setIsActiveViewOnly] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadedForId, setLoadedForId] = useState(id);
   if (id !== loadedForId) {
     setLoadedForId(id);
     setIsEditUnlocked(false);
+    setIsActiveViewOnly(false);
   }
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -424,7 +426,8 @@ export function WorkoutPage() {
   }
 
   const isLocked = workout ? !isToday(workout.date) : false;
-  const isEditable = isLocked ? isEditUnlocked : true;
+  const isViewOnly = isLocked ? !isEditUnlocked : isActiveViewOnly;
+  const isEditable = !isViewOnly;
 
   const addableExercises = exercises.filter(
     (exercise) => exercise.active && !workout?.exercises.some((we) => we.exerciseId === exercise._id),
@@ -536,14 +539,16 @@ export function WorkoutPage() {
           ←
         </Link>
         <h1 className={styles.title}>{isLocked && workout ? formatWorkoutDate(workout.date) : 'אימון פעיל'}</h1>
-        {isLocked && !isEditUnlocked && <span className={styles.lockedBadge}>לצפייה בלבד</span>}
-        {isLocked && (
+        {isViewOnly && <span className={styles.lockedBadge}>לצפייה בלבד</span>}
+        {workout && (
           <button
             type="button"
             className={styles.unlockButton}
-            onClick={() => setIsEditUnlocked((current) => !current)}
+            onClick={() =>
+              isLocked ? setIsEditUnlocked((current) => !current) : setIsActiveViewOnly((current) => !current)
+            }
           >
-            {isEditUnlocked ? 'נעילה מחדש' : 'עריכת אימון'}
+            {isViewOnly ? 'עריכת אימון' : isLocked ? 'נעילה מחדש' : 'לצפייה בלבד'}
           </button>
         )}
       </header>
@@ -630,7 +635,7 @@ export function WorkoutPage() {
           </div>
         )}
 
-        {isEditable && (
+        {(!isLocked || isEditable) && (
           <button type="button" className={styles.finishButton} onClick={() => navigate('/')}>
             {isLocked ? 'סיום עריכה' : 'סיום אימון'}
           </button>

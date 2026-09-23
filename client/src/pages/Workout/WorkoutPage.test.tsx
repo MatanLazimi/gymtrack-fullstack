@@ -277,6 +277,24 @@ describe('WorkoutPage', () => {
     expect(await screen.findByText('dashboard page')).toBeInTheDocument();
   });
 
+  it('lets an active workout switch to view-only mode while keeping the finish button available', async () => {
+    vi.stubGlobal('fetch', mockFetchRouter([getWorkout, listExercises, noPreviousPerformance]));
+
+    renderPage();
+    await screen.findByText('60 ק"ג × 12');
+
+    await userEvent.click(screen.getByRole('button', { name: 'לצפייה בלבד' }));
+
+    expect(screen.getByText('לצפייה בלבד')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('משקל')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'סיום אימון' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'עריכת אימון' }));
+
+    expect(screen.getByPlaceholderText('משקל')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ הוספת תרגיל' })).toBeInTheDocument();
+  });
+
   it('opens a past workout in view-only mode by default, with an option to unlock editing', async () => {
     vi.stubGlobal('fetch', mockFetchRouter([getPastWorkout, listExercises]));
 

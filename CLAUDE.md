@@ -126,10 +126,13 @@ their messages are not leaked to the client.
 - **Workout** — a user-owned session: a `date` plus `exercises[]`, each
   with `exerciseId`/`exerciseName` (denormalized at creation time) and an
   embedded `sets[]` (`value`, `reps`, `hasAdditionalWeight`, `isPerSide`).
-  A workout for "today" is editable; any other date opens read-only by
-  default with an explicit unlock toggle to edit it — both states render
-  through the same editing UI in `WorkoutPage.tsx`, gated by one
-  `isEditable` flag, not two separate code paths.
+  A workout for "today" opens editable by default (with a toggle to switch
+  to view-only); any other date opens read-only by default with an explicit
+  unlock toggle to edit it — both states render through the same editing UI
+  in `WorkoutPage.tsx`, gated by one `isEditable` flag, not two separate
+  code paths. A new workout can also be started by copying another
+  workout's exercises and sets (`NewWorkoutPage.tsx`), not just from a
+  routine or free exercise selection.
 - **Previous performance** (`workoutService.getPreviousPerformance`) looks
   up the most recent other workout containing a given exercise. The client
   matches it to the *specific set position* currently being filled in
